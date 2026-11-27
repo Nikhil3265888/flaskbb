@@ -1,9 +1,8 @@
 import logging
 
+import flaskbb_guard
 from flaskbb.extensions import pluggy
 from flaskbb.forum.models import Post
-
-import flaskbb_guard
 
 
 def test_plugin_is_discovered_and_loaded(application):

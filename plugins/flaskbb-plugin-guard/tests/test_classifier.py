@@ -1,13 +1,12 @@
 import pytest
-
 from flaskbb_guard.classifier import (
     KeywordClassifier,
     ToxicityClassifier,
     ToxicityResult,
 )
 
-
 # ---------- ToxicityResult ----------
+
 
 def test_result_is_toxic_when_score_equals_threshold():
     assert ToxicityResult(score=0.8, label="insult").is_toxic(0.8)
@@ -25,12 +24,14 @@ def test_result_rejects_scores_outside_0_to_1(bad_score):
 
 # ---------- ToxicityClassifier (interface) ----------
 
+
 def test_classifier_interface_cannot_be_used_directly():
     with pytest.raises(TypeError):
         ToxicityClassifier()
 
 
 # ---------- KeywordClassifier ----------
+
 
 @pytest.fixture
 def clf():

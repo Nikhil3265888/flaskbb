@@ -5,10 +5,10 @@ import os
 import sys
 import threading
 
-from flaskbb.settings import BoolSetting, IntSetting, SettingGroup, flaskbb_config
+from flaskbb.settings import BoolSetting, flaskbb_config, IntSetting, SettingGroup
 from pluggy import HookimplMarker
 
-from .classifier import KeywordClassifier, TransformerClassifier, ai_available
+from .classifier import ai_available, KeywordClassifier, TransformerClassifier
 from .service import ToxicityDetectionService
 
 hookimpl = HookimplMarker("flaskbb")
@@ -38,7 +38,10 @@ SETTINGS = SettingGroup(
             key="AUTOMOD_USE_AI",
             value=True,
             name="Use the AI model (toxic-bert)",
-            description="Use the pre-trained AI model. If it is switched off or not installed, the keyword classifier is used.",
+            description=(
+                "Use the pre-trained AI model. If it is switched off or not installed, "
+                "the keyword classifier is used."
+            ),
         ),
         BoolSetting(
             key="AUTOMOD_EXEMPT_STAFF",
@@ -119,4 +122,5 @@ def flaskbb_event_post_save_after(post, is_new):
         get_service().check_post(post)
     except Exception:
         # fail-open: the post is already saved; detection must never break posting
-        logger.exception("FlaskBB-Guard: toxicity check failed for post %s", getattr(post, "id", None))
+        post_id = getattr(post, "id", None)
+        logger.exception("FlaskBB-Guard: toxicity check failed for post %s", post_id)

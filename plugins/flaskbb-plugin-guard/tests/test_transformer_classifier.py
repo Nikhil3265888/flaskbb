@@ -1,8 +1,7 @@
 import os
 
 import pytest
-
-from flaskbb_guard.classifier import TransformerClassifier, ai_available
+from flaskbb_guard.classifier import ai_available, TransformerClassifier
 
 
 def fake_factory(output, calls):
@@ -69,6 +68,7 @@ def test_latency_is_recorded():
 
 
 # ---------- real model (slow: downloads ~440 MB the first time) ----------
+
 
 @pytest.mark.real_model
 @pytest.mark.skipif(

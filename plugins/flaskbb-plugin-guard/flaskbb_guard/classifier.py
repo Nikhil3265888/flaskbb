@@ -74,8 +74,7 @@ class KeywordClassifier(ToxicityClassifier):
         self.toxic_words = dict(toxic_words or DEFAULT_TOXIC_WORDS)
         # \b = word boundary, so "dumb" does not match inside "dumbbell"
         self._patterns = {
-            word: re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
-            for word in self.toxic_words
+            word: re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE) for word in self.toxic_words
         }
 
     def score(self, text: str) -> ToxicityResult:

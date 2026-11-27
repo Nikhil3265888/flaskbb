@@ -56,7 +56,10 @@ class ToxicityDetectionService:
         result = self.classifier.score(post.content or "")
         logger.info(
             "FlaskBB-Guard: post %s scored %.2f (%s) in %.1f ms",
-            post.id, result.score, result.label, result.latency_ms,
+            post.id,
+            result.score,
+            result.label,
+            result.latency_ms,
         )
 
         self.save_score(post, result)
@@ -96,7 +99,10 @@ class ToxicityDetectionService:
         return db.session.execute(query).first() is not None
 
     def create_report(self, post: Post, result: ToxicityResult) -> Report:
-        reason = f"{REPORT_PREFIX} {result.label} ({result.score:.0%}, {self.classifier.name} classifier)"
+        reason = (
+            f"{REPORT_PREFIX} {result.label} "
+            f"({result.score:.0%}, {self.classifier.name} classifier)"
+        )
         report = Report(reason=reason)
         report.save(post=post, user=self.get_bot_user())
         logger.info("FlaskBB-Guard: reported post %s (%s)", post.id, reason)

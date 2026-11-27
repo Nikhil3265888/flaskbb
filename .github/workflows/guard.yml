@@ -1,0 +1,91 @@
+name: FlaskBB-Guard (toxicity detection)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  FORCE_COLOR: "1"
+  PLUGIN: plugins/flaskbb-plugin-guard
+
+jobs:
+  tests:
+    name: Plugin tests, coverage and regression (Python 3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install FlaskBB and the plugin
+        run: |
+          uv sync --group dev
+          uv pip install -e "$PLUGIN"
+      - name: Plugin tests (with coverage)
+        run: uv run --no-sync coverage run --source=flaskbb_guard -m pytest "$PLUGIN/tests" -n0
+      - name: Plugin coverage must be at least 80%
+        run: >
+          uv run --no-sync coverage report
+          --include="*/flaskbb_guard/*" --omit="*/migrations/*"
+          --show-missing --fail-under=80
+      - name: Regression - all of FlaskBB's own tests still pass
+        run: uv run --no-sync pytest
+
+  postgres:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: flaskbb
+          POSTGRES_PASSWORD: flaskbb
+          POSTGRES_DB: flaskbb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flaskbb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install FlaskBB (with PostgreSQL driver) and the plugin
+        run: |
+          uv sync --group dev --extra postgres
+          uv pip install -e "$PLUGIN"
+      - name: Create a config that points at PostgreSQL
+        run: |
+          printf '\n' | uv run --no-sync flaskbb makeconfig -d
+          sed -i 's|^SQLALCHEMY_DATABASE_URI.*|SQLALCHEMY_DATABASE_URI = "postgresql://flaskbb:flaskbb@localhost:5432/flaskbb"|' flaskbb.cfg
+      - name: Install FlaskBB and enable the plugin (runs its migration)
+        run: >
+          uv run --no-sync flaskbb install --force
+          --username admin --email admin@example.com --password Admin12345
+          --enable-plugins guard
+      - name: Smoke test on PostgreSQL
+        run: uv run --no-sync python "$PLUGIN/scripts/postgres_smoke_test.py" flaskbb.cfg
+
+  quality:
+    name: Lint and security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Lint (ruff, FlaskBB's rules)
+        run: uvx ruff check "$PLUGIN"
+      - name: Formatting (ruff format)
+        run: uvx ruff format --check "$PLUGIN"
+      - name: Security scan (bandit, medium and high severity)
+        run: uvx bandit -r "$PLUGIN/flaskbb_guard" -ll
